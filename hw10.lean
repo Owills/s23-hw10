@@ -207,7 +207,8 @@ theorem sim_step : forall t1 t1',
   forall t2,
   sim t1 t2 ->
   exists t2', Rstar TStep t2 t2' /\ sim t1' t2' := 
- by sorry
+ by intros t1 t1' stept1
+    induction stept1 <;> intros t2 sim1 <;> sorry
 
 -- part 8
 /- PROBLEM 5: sim_step lifts to many steps.
@@ -225,7 +226,9 @@ theorem step_sim_star : forall t1 t1',
   forall t2,
   sim t1 t2 ->
   exists t2', Rstar TStep t2 t2' /\ sim t1' t2' := 
- by sorry
+ by intros t1 t1' rst1
+    induction rst1 <;> intros t2 sim1 <;> sorry
+
 
 
 -- part 9

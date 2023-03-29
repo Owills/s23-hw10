@@ -128,27 +128,59 @@ inductive sim : Source -> Target -> Prop :=
 -- 7 lines 
 theorem app_star : forall e1 e1' e2, Rstar TStep e1 e1' -> 
                   Rstar TStep (Target.app e1 e2) (Target.app e1' e2) :=
- by sorry
+ by intros e1 e1' e2 h 
+    induction h
+    case refl t => constructor
+    case step a b c t _ h => constructor
+                             case a => apply TStep.app
+                                       assumption
+                             case a => assumption          
+
 
 -- 7 lines
 theorem plus_star1 : forall e1 e1' e2, Rstar TStep e1 e1' -> 
                   Rstar TStep (Target.plus e1 e2) (Target.plus e1' e2) :=
- by sorry
+ by intros e1 e1' e2 h
+    induction h
+    case refl t => constructor
+    case step a b c t _ h => constructor
+                             case a => apply TStep.plus1
+                                       assumption
+                             case a => assumption            
 
 -- 7 lines
 theorem plus_star2 : forall e1 e2 e2', Rstar TStep e2 e2' -> 
                   Rstar TStep (Target.plus e1 e2) (Target.plus e1 e2') :=
- by sorry
+ by intros e1 e1' e2 h
+    induction h
+    case refl t => constructor
+    case step a b c t _ h => constructor
+                             case a => apply TStep.plus2 
+                                       assumption
+                             case a => assumption           
+
 
 -- 7 lines
 theorem minus_star1 : forall e1 e1' e2, Rstar TStep e1 e1' -> 
                   Rstar TStep (Target.minus e1 e2) (Target.minus e1' e2) :=
- by sorry
+ by intros e1 e1' e2 h
+    induction h
+    case refl t => constructor
+    case step a b c t _ h => constructor
+                             case a => apply TStep.minus1 
+                                       assumption
+                             case a => assumption        
 
 -- 7 lines
 theorem minus_star2 : forall e1 e2 e2', Rstar TStep e2 e2' -> 
                   Rstar TStep (Target.minus e1 e2) (Target.minus e1 e2') :=
- by sorry
+ by intros e1 e1' e2 h
+    induction h
+    case refl t => constructor
+    case step a b c t _ h => constructor
+                             case a => apply TStep.minus2 
+                                       assumption
+                             case a => assumption        
 
 -- part 5
 
@@ -168,7 +200,48 @@ theorem minus_star2 : forall e1 e2 e2', Rstar TStep e2 e2' ->
 -- 15 lines
 theorem compile_sub : forall (e : Source) x (body : Source),
   (e.sub x body).compile = Target.sub e.compile x body.compile :=
- by sorry
+ by intros e x b
+    induction b 
+    case b a => simp [Source.sub]
+                cases a
+                case false => constructor
+                case true => constructor
+    case and a m q p => simp [Source.sub]   
+                        simp [Target.sub]
+                        rw [<- q]
+                        rw [<- p]
+                        constructor
+    case var a => simp only [Source.sub, Target.sub] 
+                  generalize r : (x == a) = q        
+                  cases q 
+                  case false => simp only []
+                                rw [ite_false] 
+                                rw [ite_false]
+                  case true => simp only []
+                               rw [ite_true]
+                               rw [ite_true]  
+    case lam str s h => simp only [Source.sub, Target.sub]
+                        generalize r : (x == str) = q
+                        cases q 
+                        case false => simp only []
+                                      rw [ite_false]
+                                      rw [ite_false]
+                                      rw [<- h]
+                                      constructor
+                        case true => simp only []
+                                     rw [ite_true]
+                                     rw [ite_true]    
+    case app a1 a2 h1 h2 => simp only [Source.sub]
+                            simp [Target.sub]
+                            rw [<- h1]
+                            rw [<- h2]
+                            constructor                     
+                            
+                            
+
+                                          
+
+                
 
 -- part 6
 /- PROBLEM 3: Show that the simulation respects compiler.
@@ -185,7 +258,8 @@ theorem compile_sub : forall (e : Source) x (body : Source),
 -- 1 line
 theorem compile_sim : forall t,
   sim t t.compile := 
- by sorry
+ by apply sim.comp
+    
 
 -- part 7
 /- PROBLEM 4: Simulation is preserved over reduction
@@ -198,6 +272,13 @@ theorem compile_sim : forall t,
 
   Be sure to use the theorems you did in Problem 1 & Problem 2, 
   and as a hint: you will want to do induction on the SSTep relation.
+  exists (Source.compile (Source.app e' a))
+                            constructor
+                            case left => cases sim1
+                                         case comp => simp [Source.compile]
+                                                      apply app_star
+                                                      sorry
+                            case right => apply compile_sim   
 -/
 -- part 8
 
@@ -208,7 +289,99 @@ theorem sim_step : forall t1 t1',
   sim t1 t2 ->
   exists t2', Rstar TStep t2 t2' /\ sim t1' t2' := 
  by intros t1 t1' stept1
-    induction stept1 <;> intros t2 sim1 <;> sorry
+    induction stept1 <;> intros t2 sim1 
+    case app e e' a _ h => cases sim1
+                           case comp => cases (h _ (sim.comp e))
+                                        case intro w H => cases H
+                                                          case intro rs ss1 => exists (Source.compile (Source.app e' a))
+                                                                               apply And.intro
+                                                                               case left => simp [Source.compile]
+                                                                                            apply app_star
+                                                                                            cases ss1
+                                                                                            assumption
+                                                                               case right => apply compile_sim             
+    case beta x s b => exists (Source.compile (Source.sub b x s))
+                       cases sim1
+                       case comp => apply And.intro
+                                    case left => rw [compile_sub]
+                                                 simp [Source.compile] 
+                                                 apply Rstar.step
+                                                 case a => apply TStep.beta
+                                                 case a => apply Rstar.refl
+                                    case right => apply compile_sim  
+    case and1 e1 e1' e2 _ h => cases sim1
+                               case comp => cases (h _ (sim.comp e1))
+                                            case intro w H => cases H
+                                                              case intro rs ss1 => exists (Source.compile ((Source.and e1' e2)))
+                                                                                   apply And.intro
+                                                                                   case left => simp [Source.compile]
+                                                                                                apply minus_star1
+                                                                                                case a => apply plus_star1
+                                                                                                          cases ss1
+                                                                                                          assumption
+                                                                                   case right => apply compile_sim       
+    case and2 e1 e1' e2 _ h => cases sim1
+                               case comp => cases (h _ (sim.comp e1'))
+                                            case intro w H => cases H
+                                                              case intro rs ss1 => exists (Source.compile (Source.and (Source.b e1) e2))
+                                                                                   apply And.intro
+                                                                                   case left => simp [Source.compile]
+                                                                                                apply minus_star1
+                                                                                                apply plus_star2
+                                                                                                cases ss1
+                                                                                                assumption
+                                                                                   case right => apply compile_sim       
+    case and b1 b2 => cases sim1
+                      case comp => exists (Source.compile (Source.b (b1 && b2))) 
+                                   apply And.intro 
+                                   case left => simp [Source.compile]
+                                                cases b1
+                                                cases b2
+                                                case false.false => simp [Source.compile]
+                                                                    apply Rstar.step
+                                                                    case a => apply TStep.minus1
+                                                                              apply TStep.plus
+                                                                    case a => apply Rstar.step
+                                                                              apply TStep.minus
+                                                                              apply Rstar.refl                   
+                                                case false.true => simp [Source.compile]
+                                                                   apply Rstar.step
+                                                                   case a => apply TStep.minus1
+                                                                             apply TStep.plus 
+                                                                   case a => apply Rstar.step
+                                                                             apply TStep.minus
+                                                                             apply Rstar.refl
+                                                cases b2                                             
+                                                case true.false => simp [Source.compile]
+                                                                   apply Rstar.step
+                                                                   case a => apply TStep.minus1
+                                                                             apply TStep.plus 
+                                                                   case a => apply Rstar.step
+                                                                             apply TStep.minus
+                                                                             apply Rstar.refl                   
+                                                case true.true => simp [Source.compile]
+                                                                  apply Rstar.step
+                                                                  case a => apply TStep.minus1
+                                                                            apply TStep.plus 
+                                                                  case a => apply Rstar.step
+                                                                            apply TStep.minus
+                                                                            apply Rstar.refl                                 
+                                   case right => apply compile_sim
+                                                                                 
+                                    
+                                                
+                                                  
+
+
+
+                                                                  
+                                                                               
+
+                                                                               
+                                              
+
+                                                                  
+
 
 -- part 8
 /- PROBLEM 5: sim_step lifts to many steps.
@@ -227,7 +400,25 @@ theorem step_sim_star : forall t1 t1',
   sim t1 t2 ->
   exists t2', Rstar TStep t2 t2' /\ sim t1' t2' := 
  by intros t1 t1' rst1
-    induction rst1 <;> intros t2 sim1 <;> sorry
+    induction rst1 <;> intros t2 sim1 
+    case refl => constructor 
+                 case h => constructor 
+                           case left => constructor
+                           case right => assumption        
+    case step a b c ss _ h => cases (sim_step _ _ ss _ sim1)
+                              case intro w q => cases q
+                                                case intro rs2 simb => cases (h _ simb)
+                                                                       case intro w' H => cases H  
+                                                                                          exists w'
+                                                                                          constructor
+                                                                                          apply RTrans
+                                                                                          assumption
+                                                                                          assumption
+                                                                                          assumption
+
+
+
+                                               
 
 
 
@@ -254,6 +445,15 @@ theorem step_sim_star : forall t1 t1',
 -- 7 lines
 theorem correct : forall t b, Rstar SStep t (Source.b b) ->
                               Rstar TStep t.compile ((Source.b b).compile) := 
- by sorry
+ by intros e n rst1
+    cases (step_sim_star _ _ rst1 _ (compile_sim e))
+    case intro w H =>
+      cases H
+      case intro H1 H2 =>
+        cases H2
+        assumption
+                                                                
 
+    
+                  
 -- part 10
